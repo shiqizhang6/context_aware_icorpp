@@ -8,7 +8,7 @@ class Policy(object):
   actions = None
   policy = None
 
-  def __init__(self, num_states, num_actions, filename='policy/default.policy'):
+  def __init__(self, num_states, num_actions, filename='policy/323_345.policy'):
     try:
       f = open(filename, 'r')
     except:

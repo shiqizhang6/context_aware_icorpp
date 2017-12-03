@@ -6,7 +6,7 @@ from numpy import matrix
 from numpy import matlib
 
 class Pomdp(object):
-  def __init__(self, filename='models/20150501.pomdp', parsing_print_flag=True):
+  def __init__(self, filename='models/323_345.pomdp', parsing_print_flag=True):
 
     self.filename = filename
     self.print_flag = parsing_print_flag

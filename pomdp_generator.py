@@ -44,19 +44,32 @@ class StateRegular(State):
 
 class StateTerminal(State):
 
-    def __init__(self, num_item, num_person, num_room):
+    def __init__(self, num_item, num_person, num_room, success):
 
         State.__init__(self, num_item, num_person, num_room)
-        self.index = num_item * num_person * num_room
+
+        self._success = success
+
+        if success: 
+            self.index = num_item * num_person * num_room
+        else: 
+            self.index = num_item * num_person * num_room + 1
 
     def getName(self):
-        return 'terminal'
+
+        if self.isSuccessful():
+            return 'terminal_successful'
+        else:
+            return 'terminal_unsuccessful'
 
     def getIndex(self):
         return self.index
 
     def isTerminal(self):
         return True
+
+    def isSuccessful(self):
+        return self._success
 
 class Action(object):
 
@@ -197,6 +210,7 @@ class ActionDeliver(Action):
         return 'take_i' + str(self.item) + '_p' + str(self.person) + '_r' + \
             str(self.room)
 
+
 class Observation(object):
 
     def __init__(self, qd_type):
@@ -335,8 +349,8 @@ class PomdpGenerator(object):
 
         # the larger, the more unreliable for the wh-questions. 
         self.magic_number = 0.3
-        self.polar_tp_rate = 0.7
-        self.polar_tn_rate = 0.7
+        self.polar_tp_rate = 0.8
+        self.polar_tn_rate = 0.8
 
         self.state_set = []
         self.action_set = []
@@ -361,47 +375,56 @@ class PomdpGenerator(object):
         self.obs_mat = self.computeObsFunction(self.num_item, self.num_person,
             self.num_room, self.magic_number, self.polar_tp_rate)
 
-        # compute two versions of reward function
-        reward_mat_float = self.computeRewardFunction(self.num_item,
-            self.num_person, self.num_room, self.r_max, self.r_min, \
-            self.weight_i, self.weight_p, self.weight_r, wh_cost, yesno_cost)
+        reward_mat = self.computeRewardFunction(self.num_item,
+            self.num_person, self.num_room, self.r_max, self.r_min, wh_cost, yesno_cost)
 
-        reward_mat_bin = self.computeRewardFunction(self.num_item,
-            self.num_person, self.num_room, self.r_max, self.r_min, \
-            self.weight_i_bin, self.weight_p_bin, self.weight_r_bin, wh_cost, yesno_cost)
+        # # compute two versions of reward function
+        # reward_mat_float = self.computeRewardFunction(self.num_item,
+        #     self.num_person, self.num_room, self.r_max, self.r_min, \
+        #     self.weight_i, self.weight_p, self.weight_r, wh_cost, yesno_cost)
 
-        # the idea is to keep the reward of fully correct deliveries and
-        # question-asking actions, while changing the other negative values
-        reward_mat_float_positive = reward_mat_float.clip(min=0)
-        reward_mat_float_negative = reward_mat_float.clip(max=0)
-        reward_mat_float_negative_deliveries = reward_mat_float_negative -\
-            reward_mat_float_negative.clip(min=min(wh_cost, yesno_cost))
-        reward_mat_float_negative_questions = reward_mat_float_negative - \
-            reward_mat_float_negative_deliveries
+        # reward_mat_bin = self.computeRewardFunction(self.num_item,
+        #     self.num_person, self.num_room, self.r_max, self.r_min, \
+        #     self.weight_i_bin, self.weight_p_bin, self.weight_r_bin, wh_cost, yesno_cost)
 
-        reward_mat_bin_positive = reward_mat_bin.clip(min=0)
-        reward_mat_bin_negative = reward_mat_bin.clip(max=0)
-        reward_mat_bin_negative_deliveries = reward_mat_bin_negative -\
-            reward_mat_bin_negative.clip(min=min(wh_cost, yesno_cost))
-        reward_mat_bin_negative_questions = reward_mat_bin_negative -\
-            reward_mat_bin_negative_deliveries
+        # # the idea is to keep the reward of fully correct deliveries and
+        # # question-asking actions, while changing the other negative values
+        
+        # reward_mat_float_positive = reward_mat_float.clip(min=0)
+        # reward_mat_float_negative = reward_mat_float.clip(max=0)
+        # reward_mat_float_negative_deliveries = reward_mat_float_negative -\
+        #     reward_mat_float_negative.clip(min=min(wh_cost, yesno_cost))
+        # reward_mat_float_negative_questions = reward_mat_float_negative - \
+        #     reward_mat_float_negative_deliveries
 
-        sum_float_negative_deliveries = np.sum(reward_mat_float_negative_deliveries)
-        sum_bin_negative_deliveries = np.sum(reward_mat_bin_negative_deliveries)
-        reweight_factor = sum_bin_negative_deliveries / sum_float_negative_deliveries
+        # reward_mat_bin_positive = reward_mat_bin.clip(min=0)
+        # reward_mat_bin_negative = reward_mat_bin.clip(max=0)
+        # reward_mat_bin_negative_deliveries = reward_mat_bin_negative -\
+        #     reward_mat_bin_negative.clip(min=min(wh_cost, yesno_cost))
+        # reward_mat_bin_negative_questions = reward_mat_bin_negative -\
+        #     reward_mat_bin_negative_deliveries
 
-        reward_mat_float = reward_mat_float_positive + \
-            reward_mat_float_negative_questions + \
-            reward_mat_float_negative_deliveries * reweight_factor
+        # sum_float_negative_deliveries = np.sum(reward_mat_float_negative_deliveries)
+        # sum_bin_negative_deliveries = np.sum(reward_mat_bin_negative_deliveries)
+        # reweight_factor = sum_bin_negative_deliveries / sum_float_negative_deliveries
+
+        # reward_mat_float = reward_mat_float_positive + \
+        #     reward_mat_float_negative_questions + \
+        #     reward_mat_float_negative_deliveries * reweight_factor
+
+        # # writing to files
+        # self.filename = 'models/' + strategy + '_old.pomdp'
+        # self.reward_mat = reward_mat_bin
+        # self.writeToFile()
+
+        # self.filename = 'models/' + strategy +'_new.pomdp'
+        # self.reward_mat = reward_mat_float
+        # #self.reward_mat = reward_mat_float_negative_deliveries
+        # self.writeToFile()
 
         # writing to files
-        self.filename = 'models/' + strategy + '_old.pomdp'
-        self.reward_mat = reward_mat_bin
-        self.writeToFile()
-
-        self.filename = 'models/' + strategy +'_new.pomdp'
-        self.reward_mat = reward_mat_float
-        #self.reward_mat = reward_mat_float_negative_deliveries
+        self.filename = 'models/' + strategy + '.pomdp'
+        self.reward_mat = reward_mat
         self.writeToFile()
 
     def computeTransFunction(self, num_item, num_person, num_room):
@@ -416,11 +439,45 @@ class PomdpGenerator(object):
 
             if action.qd_type == 'ask':
                 trans_mat[action.getIndex()] = np.eye(num_state, dtype=float)
+
             elif action.qd_type == 'deliver':
                 trans_mat[action.getIndex()] = np.zeros((num_state, num_state))
-                trans_mat[action.getIndex()][:, num_state-1] = 1.0
+
+                for state_idx in range(len(trans_mat[action.getIndex()])): 
+
+                    if self.state_set[state_idx].isTerminal():
+                        if self.state_set[state_idx].isSuccessful():
+                            trans_mat[action.getIndex()][state_idx][num_state-2] = 1.0
+                            trans_mat[action.getIndex()][state_idx][num_state-1] = 0.0
+                        else:
+                            trans_mat[action.getIndex()][state_idx][num_state-2] = 0.0
+                            trans_mat[action.getIndex()][state_idx][num_state-1] = 1.0
+
+                    # This is where the knowledge learned from navigation domain takes effect
+                    else:
+                        assert self.state_set[state_idx].isTerminal() is False
+                        real_goal_room = self.state_set[state_idx].getRoomIndex()
+                        guessed_goal_room = action.getRoomIndex()
+
+                        if self.matched(action, self.state_set[state_idx]):
+                            delivery_success_rate = self.getNavigationSuccessRate(guessed_goal_room)
+                        else:
+                            delivery_success_rate = self.getNavigationSuccessRate(guessed_goal_room) * \
+                                self.getNavigationSuccessRate(guessed_goal_room) * \
+                                self.getNavigationSuccessRate(real_goal_room)
+
+                        trans_mat[action.getIndex()][state_idx][num_state-2] = delivery_success_rate
+                        trans_mat[action.getIndex()][state_idx][num_state-1] = 1.0 - delivery_success_rate
+
                 
+        for action in self.action_set:
+            for state_idx in range(len(trans_mat[action.getIndex()])): 
+                assert sum(trans_mat[action.getIndex()][state_idx]) == 1.0
+
         return trans_mat
+
+    def getNavigationSuccessRate(self, room):
+        return 0.95
 
     # HERE WE INTRODUCE A NOVEL OBSERVATION MODEL
     # true-positive rate = 1/(n^0.1), where n is the variable's range
@@ -435,10 +492,11 @@ class PomdpGenerator(object):
 
         for action in self.action_set:
 
+            obs_mat[action.getIndex()] = np.zeros((num_state, num_obs))
+
             # no observation given 'terminal' state, no matter of the action
             for state in self.state_set:
                 if state.isTerminal() == True:
-                    obs_mat[action.getIndex()] = np.zeros((num_state, num_obs))
                     obs_mat[action.getIndex()][state.getIndex(), num_obs-1]=1.0
 
             if action.qd_type == 'deliver':
@@ -599,10 +657,14 @@ class PomdpGenerator(object):
                                             [observation.getIndex()]\
                                             = self.polar_tn_rate
 
+        for action in self.action_set:
+            for state in self.state_set:
+                    assert sum(obs_mat[action.getIndex()][state.getIndex()]) == 1.0
+
         return obs_mat
 
     def computeRewardFunction(self, num_item, num_person, num_room,
-        r_max, r_min, weight_i, weight_p, weight_r, wh_cost, yesno_cost):
+        r_max, r_min, wh_cost, yesno_cost):
 
         reward_mat = np.zeros((len(self.action_set), len(self.state_set), ))
 
@@ -622,27 +684,49 @@ class PomdpGenerator(object):
                     if state.isTerminal() == False:
 
                         reward_mat[action.getIndex()][state.getIndex()] = \
-                            self.deliveryReward(r_max, r_min, 
-                            weight_i, weight_p, weight_r, action, state)
+                            self.deliveryReward(r_max, r_min, action, state)
 
-            num_state = num_item * num_person * num_room + 1
+            num_state = len(self.state_set)
             reward_mat[action.getIndex()][num_state - 1] = 0.0
+            reward_mat[action.getIndex()][num_state - 2] = 0.0
 
         return reward_mat
 
-    def deliveryReward(self, r_max, r_min, weight_i, weight_p, weight_r,
-        action, state):
+    # def deliveryReward(self, r_max, r_min, weight_i, weight_p, weight_r,
+    #     action, state):
 
-        if weight_i[action.getItemIndex()][state.getItemIndex()] == 1.0 and  \
-                weight_p[action.getPersonIndex()][state.getPersonIndex()] == 1.0 and  \
-                weight_r[action.getRoomIndex()][state.getRoomIndex()] == 1.0:
+    #     if weight_i[action.getItemIndex()][state.getItemIndex()] == 1.0 and  \
+    #             weight_p[action.getPersonIndex()][state.getPersonIndex()] == 1.0 and  \
+    #             weight_r[action.getRoomIndex()][state.getRoomIndex()] == 1.0:
+    #         return r_max
+    #     else:
+    #         ret = r_min * (1.0 - \
+    #             weight_i[action.getItemIndex()][state.getItemIndex()] * \
+    #             weight_p[action.getPersonIndex()][state.getPersonIndex()] * \
+    #             weight_r[action.getRoomIndex()][state.getRoomIndex()])
+    #         return ret
+
+    def deliveryReward(self, r_max, r_min, action, state):
+
+        if self.matched(action, state):
             return r_max
         else:
-            ret = r_min * (1.0 - \
-                weight_i[action.getItemIndex()][state.getItemIndex()] * \
-                weight_p[action.getPersonIndex()][state.getPersonIndex()] * \
-                weight_r[action.getRoomIndex()][state.getRoomIndex()])
-            return ret
+            return r_min
+
+
+    def matched(self, action, state):
+        
+        assert action.qd_type == 'deliver'
+        assert state.isTerminal() == False
+
+        if action.getItemIndex() == state.getItemIndex() and \
+            action.getPersonIndex() == state.getPersonIndex() and \
+            action.getRoomIndex() == state.getRoomIndex():
+
+            return True
+        else: 
+            return False
+
 
     def computeStateSet(self, num_item, num_person, num_room):
 
@@ -652,7 +736,8 @@ class PomdpGenerator(object):
                 for r in range(num_room):
                     ret.append(StateRegular(i, p, r, num_item, num_person, num_room))
 
-        ret.append(StateTerminal(num_item, num_person, num_room))
+        ret.append(StateTerminal(num_item, num_person, num_room, True))
+        ret.append(StateTerminal(num_item, num_person, num_room, False))
 
         return ret
 

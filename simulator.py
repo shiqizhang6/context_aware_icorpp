@@ -8,7 +8,7 @@ import policy_parser
 import numpy
 import random
 from scipy import stats
-sys.path.append('/home/szhang/software/python_progress/progress-1.2')
+sys.path.append('/home/szhang/software/python_progress/progress-1.3')
 from progress.bar import Bar
 import subprocess
 
@@ -203,10 +203,10 @@ def main():
     s = Simulator(uniform_init_belief = True, 
         auto_state = True, 
         auto_observations = True, 
-        print_flag = False, 
-        policy_file = 'policy/323_345_new.policy', 
-        pomdp_file =  'models/323_345_new.pomdp',
-        trials_num = 10000,
+        print_flag = True, 
+        policy_file = 'policy/323_345.policy', 
+        pomdp_file =  'models/323_345.pomdp',
+        trials_num = 10,
         num_item = 3, 
         num_person = 2, 
         num_room = 3)
